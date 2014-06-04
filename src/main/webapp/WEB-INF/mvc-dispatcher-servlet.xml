@@ -1,0 +1,117 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:mvc="http://www.springframework.org/schema/mvc" 
+	xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:sec="http://www.springframework.org/schema/security"
+	xsi:schemaLocation="
+        http://www.springframework.org/schema/beans     
+        http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+        http://www.springframework.org/schema/context 
+        http://www.springframework.org/schema/context/spring-context-3.0.xsd
+        http://www.springframework.org/schema/mvc
+        http://www.springframework.org/schema/mvc/spring-mvc-3.0.xsd
+        http://www.springframework.org/schema/jdbc
+        http://www.springframework.org/schema/jdbc/spring-jdbc-3.0.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/security
+        http://www.springframework.org/schema/security/spring-security-3.0.3.xsd">
+        
+    <mvc:annotation-driven />
+
+    <!-- declaring base package -->
+    <context:component-scan base-package="com.david.common" />
+
+  	<bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="prefix">
+			<value>/WEB-INF/pages/</value>
+		</property>
+		<property name="suffix">
+			<value>.jsp</value>
+		</property>
+	</bean>
+
+    <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource">
+        <property name="driverClassName" value="com.mysql.jdbc.Driver" />
+        <property name="url" value="jdbc:mysql://localhost:3306/mkyongjava" />
+        <property name="username" value="root" />
+        <property name="password" value="" />
+    </bean>
+
+    <bean id="sessionFactory" class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"></property>
+        <property name="hibernateProperties">
+            <props>
+                <prop key="hibernate.dialect">org.hibernate.dialect.MySQL5Dialect</prop>
+                <prop key="hibernate.current_session_context_class">org.springframework.orm.hibernate4.SpringSessionContext</prop>
+                <prop key="hibernate.show_sql">true</prop>
+            </props>
+        </property>
+        <property name="packagesToScan" value="com.david.common" />
+    </bean>
+
+    <bean id="transactionManager" class="org.springframework.orm.hibernate4.HibernateTransactionManager">
+        <property name="sessionFactory" ref="sessionFactory" />
+    </bean>
+
+    <tx:annotation-driven  transaction-manager="transactionManager" proxy-target-class="true"/>
+    
+    <sec:http auto-config="true" use-expressions="true">
+<!--         <sec:intercept-url pattern="/login" access="permitAll"/>
+        <sec:intercept-url pattern="/admin/*" access="ROLE_ADMIN"/>
+        <sec:form-login login-page="/login" 
+                        default-target-url="/list" 
+                        authentication-failure-url="/loginFail" />
+        <sec:logout logout-success-url="/logout"/> -->
+        <sec:intercept-url pattern="/welcome*" access="ROLE_USER" />
+		<sec:form-login login-page="/login"
+		            default-target-url="/list" 
+		            authentication-failure-url="/loginFail" />
+		<sec:logout logout-success-url="/logout" />		
+    </sec:http>
+
+    <sec:authentication-manager>
+        <sec:authentication-provider>
+<!--              <sec:user-service>
+                <sec:user name="admin" password="password" authorities="ROLE_USER" />
+            </sec:user-service> -->
+            <sec:jdbc-user-service
+                 data-source-ref="dataSource"
+                 users-by-username-query="select username,password, enabled from users where username=?" 
+                 authorities-by-username-query="select u.username, ur.authority from users u, user_roles ur where u.user_id = ur.user_id and u.username =?" 
+		    />
+            <!--   authorities-by-username-query="SELECT u.USERNAME, r.ROLENAME FROM USERS u, ROLE r WHERE u.user_id = r.USERID
+AND u.USERNAME=?"/> -->
+            <sec:password-encoder hash="plaintext" />
+        </sec:authentication-provider>
+    </sec:authentication-manager>
+    
+    <!-- Localization stuff -->
+    <bean id="messageSource" class="org.springframework.context.support.ReloadableResourceBundleMessageSource">
+	    <property name="basename" value="classpath:messages" />
+	    <property name="defaultEncoding" value="UTF-8"/>
+	</bean>
+ 
+	<bean id="localeChangeInterceptor" class="org.springframework.web.servlet.i18n.LocaleChangeInterceptor">
+	    <property name="paramName" value="lang" />
+	</bean>
+	 
+	<bean id="localeResolver" class="org.springframework.web.servlet.i18n.CookieLocaleResolver">
+	    <property name="defaultLocale" value="en"/>
+	</bean>
+	 
+	<bean id="handlerMapping" class="org.springframework.web.servlet.mvc.annotation.DefaultAnnotationHandlerMapping">
+	    <property name="interceptors">
+	        <ref bean="localeChangeInterceptor" />
+	    </property>
+	</bean>
+	<mvc:interceptors>
+    <bean class="org.springframework.web.servlet.i18n.LocaleChangeInterceptor">
+        <property name="paramName" value="lang" />
+    </bean>
+    </mvc:interceptors>
+	<!-- Localization stuff -->
+	
+</beans>
